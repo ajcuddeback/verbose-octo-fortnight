@@ -9,7 +9,6 @@ import com.budgetapp.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,13 +32,13 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         Object[] result = authService.register(request);
-        String token = (String) result[0];
-        AuthResponse authResponse = (AuthResponse) result[1];
+        String token        = (String)       result[0];
+        AuthResponse body   = (AuthResponse) result[1];
 
         ResponseCookie jwtCookie = jwtTokenProvider.generateJwtCookie(token);
-        return ResponseEntity.status(HttpStatus.CREATED)
+        return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .body(authResponse);
+                .body(body);
     }
 
     /**
@@ -49,13 +48,13 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         Object[] result = authService.login(request);
-        String token = (String) result[0];
-        AuthResponse authResponse = (AuthResponse) result[1];
+        String token        = (String)       result[0];
+        AuthResponse body   = (AuthResponse) result[1];
 
         ResponseCookie jwtCookie = jwtTokenProvider.generateJwtCookie(token);
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .body(authResponse);
+                .body(body);
     }
 
     /**
