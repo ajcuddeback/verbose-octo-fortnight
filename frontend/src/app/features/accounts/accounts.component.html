@@ -1,0 +1,147 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Accounts</h1>
+      <p class="text-secondary text-sm">Manage your financial accounts</p>
+    </div>
+    <button class="btn btn-primary" (click)="openAddForm()">+ Add Account</button>
+  </div>
+
+  <!-- Net Worth Summary -->
+  <div class="net-worth-card card">
+    <div class="net-worth-main">
+      <span class="text-secondary text-sm">Net Worth</span>
+      <span class="net-worth-value" [class.text-green]="netWorth() >= 0" [class.text-red]="netWorth() < 0">
+        {{ formatCurrency(netWorth()) }}
+      </span>
+    </div>
+    <div class="net-worth-breakdown">
+      <div class="nw-item">
+        <span class="text-secondary text-xs">Total Assets</span>
+        <span class="text-green font-semibold">{{ formatCurrency(totalAssets()) }}</span>
+      </div>
+      <div class="nw-divider"></div>
+      <div class="nw-item">
+        <span class="text-secondary text-xs">Total Liabilities</span>
+        <span class="text-red font-semibold">{{ formatCurrency(totalLiabilities()) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plaid Banner -->
+  <div class="plaid-banner">
+    <div class="plaid-icon">🏦</div>
+    <div class="plaid-content">
+      <p class="font-semibold">Bank Account Sync <span class="badge badge-purple" style="font-size: 0.7rem;">Coming Soon</span></p>
+      <p class="text-secondary text-sm">Automatically sync your transactions from thousands of banks via Plaid.</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <app-loading-spinner message="Loading accounts..." />
+  } @else if (accounts().length === 0) {
+    <div class="card empty-state">
+      <div class="empty-icon">⬡</div>
+      <p class="font-semibold">No accounts yet</p>
+      <p class="text-secondary text-sm">Add your bank accounts, credit cards, and investments.</p>
+      <button class="btn btn-primary" style="margin-top: 1rem;" (click)="openAddForm()">+ Add Account</button>
+    </div>
+  } @else {
+    <div class="accounts-grid">
+      @for (account of accounts(); track account.id) {
+        <div class="account-card card">
+          <div class="account-header">
+            <div class="account-type-icon" [class]="'type-' + account.accountType.toLowerCase()">
+              {{ account.accountType === 'CHECKING' ? '💳' : account.accountType === 'SAVINGS' ? '💰' : account.accountType === 'CREDIT_CARD' ? '💳' : account.accountType === 'INVESTMENT' ? '📈' : '💵' }}
+            </div>
+            <div class="account-meta">
+              <span class="badge" [class]="getAccountTypeClass(account.accountType)">{{ getAccountTypeLabel(account.accountType) }}</span>
+              @if (account.lastFourDigits) {
+                <span class="text-secondary text-xs">••••{{ account.lastFourDigits }}</span>
+              }
+            </div>
+            <div class="account-actions">
+              <button class="btn btn-ghost btn-sm" (click)="openEditForm(account)">✎</button>
+              <button class="btn btn-ghost btn-sm text-red" (click)="confirmDelete(account)">🗑</button>
+            </div>
+          </div>
+          <div class="account-name">{{ account.name }}</div>
+          <div class="account-bank text-secondary text-sm">{{ account.bankName }}</div>
+          <div class="account-balance" [class]="getBalanceClass(account)">
+            {{ formatCurrency(account.balance) }}
+          </div>
+          @if (account.accountType === 'CREDIT_CARD') {
+            <div class="credit-note text-red text-xs">Liability — shown as negative in net worth</div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Account Form Modal -->
+@if (showForm()) {
+  <div class="modal-overlay" (click)="$event.target === $event.currentTarget && closeForm()">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ editingAccount() ? 'Edit Account' : 'Add Account' }}</h3>
+        <button class="modal-close" (click)="closeForm()">✕</button>
+      </div>
+      @if (formError()) {
+        <div class="alert alert-error">{{ formError() }}</div>
+      }
+      <form [formGroup]="accountForm" (ngSubmit)="submitForm()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Account Name</label>
+            <input type="text" formControlName="name" class="form-control" placeholder="My Checking" />
+            @if (accountForm.get('name')?.invalid && accountForm.get('name')?.touched) {
+              <span class="form-error">Name is required</span>
+            }
+          </div>
+          <div class="form-group">
+            <label>Bank Name</label>
+            <input type="text" formControlName="bankName" class="form-control" placeholder="Chase, BofA, etc." />
+            @if (accountForm.get('bankName')?.invalid && accountForm.get('bankName')?.touched) {
+              <span class="form-error">Bank name is required</span>
+            }
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Account Type</label>
+            <select formControlName="accountType" class="form-control">
+              @for (type of accountTypes; track type.value) {
+                <option [value]="type.value">{{ type.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Last 4 Digits <span class="text-secondary text-sm">(optional)</span></label>
+            <input type="text" formControlName="lastFourDigits" class="form-control" placeholder="1234" maxlength="4" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Current Balance</label>
+          <input type="number" formControlName="balance" class="form-control" placeholder="0.00" step="0.01" />
+        </div>
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 0.5rem;">
+          <button type="button" class="btn btn-secondary" (click)="closeForm()">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="formLoading()">
+            {{ formLoading() ? 'Saving...' : (editingAccount() ? 'Update' : 'Add Account') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+@if (deletingAccount()) {
+  <app-confirm-dialog
+    title="Delete Account"
+    [message]="'Delete account \"' + deletingAccount()!.name + '\"? This cannot be undone.'"
+    confirmText="Delete"
+    (confirmed)="deleteAccount()"
+    (cancelled)="deletingAccount.set(null)"
+  />
+}

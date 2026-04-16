@@ -1,0 +1,168 @@
+<div class="dashboard-page">
+  <div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <span class="page-subtitle text-secondary">Your financial overview</span>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-grid">
+      <div class="skeleton" style="height: 100px; border-radius: 12px;"></div>
+      <div class="skeleton" style="height: 100px; border-radius: 12px;"></div>
+      <div class="skeleton" style="height: 100px; border-radius: 12px;"></div>
+      <div class="skeleton" style="height: 100px; border-radius: 12px;"></div>
+    </div>
+    <div class="skeleton" style="height: 200px; border-radius: 12px; margin-top: 1.25rem;"></div>
+    <div class="grid-2" style="margin-top: 1.25rem;">
+      <div class="skeleton" style="height: 300px; border-radius: 12px;"></div>
+      <div class="skeleton" style="height: 300px; border-radius: 12px;"></div>
+    </div>
+  } @else {
+    <!-- Stat Cards Row -->
+    <div class="grid-4 stat-row">
+      <div class="stat-card">
+        <div class="stat-icon income-icon">↑</div>
+        <div class="stat-body">
+          <p class="stat-label">Total Income</p>
+          <p class="stat-value text-green">{{ formatCurrency(totalIncome()) }}</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon expense-icon">↓</div>
+        <div class="stat-body">
+          <p class="stat-label">Total Expenses</p>
+          <p class="stat-value text-red">{{ formatCurrency(totalExpenses()) }}</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon savings-icon">≡</div>
+        <div class="stat-body">
+          <p class="stat-label">Net Savings</p>
+          <p class="stat-value" [class.text-green]="netSavings() >= 0" [class.text-red]="netSavings() < 0">
+            {{ formatCurrency(netSavings()) }}
+          </p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon rate-icon">%</div>
+        <div class="stat-body">
+          <p class="stat-label">Savings Rate</p>
+          <p class="stat-value" [class.text-green]="savingsRate() >= 20" [class.text-yellow]="savingsRate() > 0 && savingsRate() < 20" [class.text-red]="savingsRate() <= 0">
+            {{ savingsRate() }}%
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial Health Score -->
+    @if (healthScore()) {
+      <div class="card" style="margin-top: 1.25rem;">
+        <div class="card-header">
+          <h2 class="card-title">Financial Health Score</h2>
+          <span class="badge" [class.badge-green]="healthScore()!.overallScore >= 80" [class.badge-yellow]="healthScore()!.overallScore >= 60 && healthScore()!.overallScore < 80" [class.badge-red]="healthScore()!.overallScore < 60">
+            Grade: {{ healthScore()!.grade }}
+          </span>
+        </div>
+        <app-financial-health-score
+          [score]="healthScore()!.overallScore"
+          [grade]="healthScore()!.grade"
+          [breakdown]="healthScore()!.components"
+        />
+      </div>
+    }
+
+    <!-- Charts Row -->
+    <div class="grid-2" style="margin-top: 1.25rem;">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Income vs Expenses</h2>
+          <span class="text-secondary text-sm">Last 6 months</span>
+        </div>
+        <div class="chart-wrapper">
+          <canvas #incomeExpenseChart></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Spending by Category</h2>
+          <span class="text-secondary text-sm">This month</span>
+        </div>
+        <div class="chart-wrapper">
+          <canvas #categoryChart></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Row -->
+    <div class="grid-2" style="margin-top: 1.25rem;">
+      <!-- Recent Transactions -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Recent Transactions</h2>
+          <a routerLink="/transactions" class="text-accent text-sm">View all</a>
+        </div>
+        @if (recentTransactions().length === 0) {
+          <div class="empty-state">
+            <p class="text-secondary">No transactions yet.</p>
+          </div>
+        } @else {
+          <div class="transactions-list">
+            @for (tx of recentTransactions(); track tx.id) {
+              <div class="tx-row">
+                <div class="tx-icon" [style.background]="tx.type === 'INCOME' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'">
+                  {{ tx.type === 'INCOME' ? '↑' : '↓' }}
+                </div>
+                <div class="tx-info">
+                  <span class="tx-desc">{{ tx.description }}</span>
+                  <span class="tx-meta text-secondary text-sm">
+                    {{ formatDate(tx.transactionDate) }}
+                    @if (tx.categoryName) {
+                      · {{ tx.categoryName }}
+                    }
+                  </span>
+                </div>
+                <span class="tx-amount" [class.text-green]="tx.type === 'INCOME'" [class.text-red]="tx.type === 'EXPENSE'">
+                  {{ tx.type === 'INCOME' ? '+' : '-' }}{{ formatCurrency(tx.amount) }}
+                </span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Upcoming Bills -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Upcoming Bills</h2>
+          <a routerLink="/bills" class="text-accent text-sm">View all</a>
+        </div>
+        @if (upcomingBills().length === 0) {
+          <div class="empty-state">
+            <p class="text-secondary">No upcoming bills.</p>
+          </div>
+        } @else {
+          <div class="bills-list">
+            @for (bill of upcomingBills(); track bill.id) {
+              <div class="bill-row">
+                <div class="bill-info">
+                  <span class="bill-name">{{ bill.name }}</span>
+                  <span class="bill-freq text-secondary text-sm">{{ bill.frequency }}</span>
+                </div>
+                <div class="bill-right">
+                  <span class="bill-amount font-semibold">{{ formatCurrency(bill.amount) }}</span>
+                  <span class="bill-status text-sm"
+                    [class.text-red]="getBillStatus(bill) === 'overdue'"
+                    [class.text-yellow]="getBillStatus(bill) === 'soon'"
+                    [class.text-secondary]="getBillStatus(bill) === 'ok'"
+                  >
+                    {{ getBillStatusLabel(bill) }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

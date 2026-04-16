@@ -27,13 +27,12 @@ public class BudgetController {
     @GetMapping
     public ResponseEntity<List<BudgetResponse>> getBudgetsForMonth(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().monthValue}") int month,
-            @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().year}") int year) {
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year) {
         Long userId = getUserIdFromEmail(userDetails.getUsername());
-        // Default to current month/year if not provided
-        if (month == 0) month = LocalDate.now().getMonthValue();
-        if (year == 0) year = LocalDate.now().getYear();
-        return ResponseEntity.ok(budgetService.getBudgetsForMonth(userId, month, year));
+        int targetMonth = (month != null && month > 0) ? month : LocalDate.now().getMonthValue();
+        int targetYear = (year != null && year > 0) ? year : LocalDate.now().getYear();
+        return ResponseEntity.ok(budgetService.getBudgetsForMonth(userId, targetMonth, targetYear));
     }
 
     @PostMapping

@@ -1,0 +1,199 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Goals</h1>
+      <p class="text-secondary text-sm">Track your financial goals</p>
+    </div>
+    <button class="btn btn-primary" (click)="openAddForm()">+ Add Goal</button>
+  </div>
+
+  @if (loading()) {
+    <app-loading-spinner message="Loading goals..." />
+  } @else if (goals().length === 0) {
+    <div class="card empty-state">
+      <div class="empty-icon">◎</div>
+      <p class="font-semibold">No goals yet</p>
+      <p class="text-secondary text-sm">Set your first financial goal to start tracking progress.</p>
+      <button class="btn btn-primary" style="margin-top: 1rem;" (click)="openAddForm()">+ Add Goal</button>
+    </div>
+  } @else {
+    <div class="goals-grid">
+      @for (goal of goals(); track goal.id) {
+        <div class="goal-card card">
+          <div class="goal-header">
+            <div class="goal-category-icon">{{ getCategoryIcon(goal.category) }}</div>
+            <div class="goal-title-section">
+              <h3 class="goal-name">{{ goal.name }}</h3>
+              <span class="badge" [class.badge-green]="goal.isOnTrack" [class.badge-yellow]="!goal.isOnTrack && goal.progressPercentage < 100" [class.badge-purple]="goal.progressPercentage >= 100">
+                {{ goal.progressPercentage >= 100 ? 'Completed' : (goal.isOnTrack ? 'On Track' : 'Behind') }}
+              </span>
+            </div>
+            <div class="goal-actions">
+              <button class="btn btn-ghost btn-sm" (click)="openEditForm(goal)">✎</button>
+              <button class="btn btn-ghost btn-sm text-red" (click)="confirmDelete(goal)">🗑</button>
+            </div>
+          </div>
+
+          <div class="goal-progress-section">
+            <div class="progress-circle-wrapper">
+              <svg viewBox="0 0 100 100" class="progress-svg">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="var(--bg-primary)" stroke-width="8"/>
+                <circle
+                  cx="50" cy="50" r="45"
+                  fill="none"
+                  [attr.stroke]="getProgressColor(goal.progressPercentage)"
+                  stroke-width="8"
+                  stroke-linecap="round"
+                  [attr.stroke-dasharray]="getCircumference()"
+                  [attr.stroke-dashoffset]="getDashOffset(goal.progressPercentage)"
+                  transform="rotate(-90 50 50)"
+                  style="transition: stroke-dashoffset 1s ease;"
+                />
+              </svg>
+              <div class="progress-center">
+                <span class="progress-pct">{{ Math.min(goal.progressPercentage, 100).toFixed(0) }}%</span>
+              </div>
+            </div>
+
+            <div class="goal-amounts">
+              <div class="amount-row">
+                <span class="text-secondary text-sm">Saved</span>
+                <span class="font-semibold text-green">{{ formatCurrency(goal.currentAmount) }}</span>
+              </div>
+              <div class="amount-row">
+                <span class="text-secondary text-sm">Target</span>
+                <span class="font-semibold">{{ formatCurrency(goal.targetAmount) }}</span>
+              </div>
+              <div class="amount-row">
+                <span class="text-secondary text-sm">Remaining</span>
+                <span class="font-semibold text-accent">{{ formatCurrency(Math.max(0, goal.targetAmount - goal.currentAmount)) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="goal-dates">
+            <div class="date-item">
+              <span class="text-secondary text-xs">Target Date</span>
+              <span class="text-sm">{{ formatDate(goal.targetDate) }}</span>
+            </div>
+            @if (goal.projectedCompletionDate) {
+              <div class="date-item">
+                <span class="text-secondary text-xs">Projected</span>
+                <span class="text-sm" [class.text-green]="goal.isOnTrack" [class.text-yellow]="!goal.isOnTrack">
+                  {{ formatDate(goal.projectedCompletionDate) }}
+                </span>
+              </div>
+            }
+          </div>
+
+          @if (goal.description) {
+            <p class="goal-description text-secondary text-sm">{{ goal.description }}</p>
+          }
+
+          <button class="btn btn-primary btn-full" style="margin-top: 1rem;" (click)="openContribute(goal)">
+            + Contribute
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Goal Form Modal -->
+@if (showForm()) {
+  <div class="modal-overlay" (click)="$event.target === $event.currentTarget && closeForm()">
+    <div class="modal" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ editingGoal() ? 'Edit Goal' : 'Add New Goal' }}</h3>
+        <button class="modal-close" (click)="closeForm()">✕</button>
+      </div>
+      @if (formError()) {
+        <div class="alert alert-error">{{ formError() }}</div>
+      }
+      <form [formGroup]="goalForm" (ngSubmit)="submitForm()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Goal Name</label>
+            <input type="text" formControlName="name" class="form-control" placeholder="e.g. Emergency Fund" />
+            @if (goalForm.get('name')?.invalid && goalForm.get('name')?.touched) {
+              <span class="form-error">Name is required</span>
+            }
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select formControlName="category" class="form-control">
+              @for (cat of goalCategories; track cat.value) {
+                <option [value]="cat.value">{{ cat.icon }} {{ cat.label }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description <span class="text-secondary text-sm">(optional)</span></label>
+          <input type="text" formControlName="description" class="form-control" placeholder="Brief description..." />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Target Amount</label>
+            <input type="number" formControlName="targetAmount" class="form-control" placeholder="0.00" min="1" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>Current Amount</label>
+            <input type="number" formControlName="currentAmount" class="form-control" placeholder="0.00" min="0" step="0.01" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Target Date</label>
+          <input type="date" formControlName="targetDate" class="form-control" />
+        </div>
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 0.5rem;">
+          <button type="button" class="btn btn-secondary" (click)="closeForm()">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="formLoading()">
+            {{ formLoading() ? 'Saving...' : (editingGoal() ? 'Update Goal' : 'Add Goal') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Contribute Modal -->
+@if (contributingGoal()) {
+  <div class="modal-overlay" (click)="$event.target === $event.currentTarget && contributingGoal.set(null)">
+    <div class="modal" style="max-width: 380px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Contribute to {{ contributingGoal()!.name }}</h3>
+        <button class="modal-close" (click)="contributingGoal.set(null)">✕</button>
+      </div>
+      <p class="text-secondary text-sm" style="margin-bottom: 1rem;">
+        Current: {{ formatCurrency(contributingGoal()!.currentAmount) }} / {{ formatCurrency(contributingGoal()!.targetAmount) }}
+      </p>
+      <div class="form-group">
+        <label>Amount to Contribute</label>
+        <input
+          type="number"
+          class="form-control"
+          placeholder="0.00"
+          step="0.01"
+          min="0.01"
+          [ngModel]="contributeAmount()"
+          (ngModelChange)="contributeAmount.set($event)"
+        />
+      </div>
+      <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+        <button class="btn btn-secondary" (click)="contributingGoal.set(null)">Cancel</button>
+        <button class="btn btn-success" (click)="submitContribution()">Add Contribution</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (deletingGoal()) {
+  <app-confirm-dialog
+    title="Delete Goal"
+    [message]="'Delete goal \"' + deletingGoal()!.name + '\"? This cannot be undone.'"
+    confirmText="Delete"
+    (confirmed)="deleteGoal()"
+    (cancelled)="deletingGoal.set(null)"
+  />
+}
