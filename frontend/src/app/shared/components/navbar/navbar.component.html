@@ -1,0 +1,49 @@
+<nav class="sidebar" [class.collapsed]="isCollapsed()">
+  <div class="sidebar-header">
+    <div class="logo-wrapper">
+      <div class="logo-icon">CP</div>
+      @if (!isCollapsed()) {
+        <span class="logo-text">ClearPath</span>
+      }
+    </div>
+    <button class="collapse-btn" (click)="toggleCollapse()" [title]="isCollapsed() ? 'Expand' : 'Collapse'">
+      {{ isCollapsed() ? '▶' : '◀' }}
+    </button>
+  </div>
+
+  <div class="nav-items">
+    @for (item of navItems; track item.path) {
+      <a
+        [routerLink]="item.path"
+        routerLinkActive="active"
+        class="nav-item"
+        [title]="isCollapsed() ? item.label : ''"
+      >
+        <span class="nav-icon">{{ item.icon }}</span>
+        @if (!isCollapsed()) {
+          <span class="nav-label">{{ item.label }}</span>
+        }
+      </a>
+    }
+  </div>
+
+  <div class="sidebar-footer">
+    @if (user()) {
+      <div class="user-info" [class.collapsed]="isCollapsed()">
+        <div class="avatar">{{ userInitials }}</div>
+        @if (!isCollapsed()) {
+          <div class="user-details">
+            <span class="user-name">{{ user()!.firstName }} {{ user()!.lastName }}</span>
+            <span class="user-email">{{ user()!.email }}</span>
+          </div>
+        }
+      </div>
+    }
+    <button class="logout-btn" (click)="logout()" [title]="isCollapsed() ? 'Logout' : ''">
+      <span>⎋</span>
+      @if (!isCollapsed()) {
+        <span>Logout</span>
+      }
+    </button>
+  </div>
+</nav>

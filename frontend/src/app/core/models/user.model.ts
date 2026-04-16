@@ -9,8 +9,9 @@ export interface User {
   createdAt: string;
 }
 
+// AuthResponse no longer contains a token — JWT is set as an HttpOnly cookie by the backend.
+// Use the User type directly after login/register by calling GET /api/auth/me.
 export interface AuthResponse {
-  token: string;
   user: User;
 }
 

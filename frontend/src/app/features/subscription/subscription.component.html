@@ -1,0 +1,118 @@
+<div class="subscription-page">
+  <div class="subscription-container">
+
+    @if (isSubscribed) {
+      <!-- Subscription Management -->
+      <div class="subscription-card active-card">
+        <div class="active-badge">
+          <span class="badge badge-green">Active Subscription</span>
+        </div>
+        <h2 class="plan-title">ClearPath Premium</h2>
+        <div class="plan-price">
+          <span class="price">$5</span>
+          <span class="period">/month</span>
+        </div>
+
+        @if (subscription()) {
+          <div class="subscription-details">
+            @if (subscription()!.currentPeriodEnd) {
+              <p class="detail-item">
+                <span class="detail-label">Current period ends:</span>
+                <span class="detail-value">{{ formatDate(subscription()!.currentPeriodEnd) }}</span>
+              </p>
+            }
+            @if (subscription()!.cancelAtPeriodEnd) {
+              <div class="alert alert-warning" style="margin-top: 1rem;">
+                Your subscription is set to cancel at the end of the current billing period.
+              </div>
+            }
+          </div>
+        }
+
+        @if (successMessage()) {
+          <div class="alert alert-success" style="margin-top: 1rem;">{{ successMessage() }}</div>
+        }
+
+        @if (!subscription()?.cancelAtPeriodEnd) {
+          <div class="danger-zone">
+            <h4>Manage Subscription</h4>
+            <p>Cancel your subscription. You'll retain access until the end of your billing period.</p>
+            <button
+              class="btn btn-danger btn-sm"
+              (click)="confirmCancel()"
+              [disabled]="cancelLoading()"
+            >
+              @if (cancelLoading()) {
+                Cancelling...
+              } @else {
+                Cancel Subscription
+              }
+            </button>
+          </div>
+        }
+      </div>
+    } @else {
+      <!-- Subscribe CTA -->
+      <div class="subscription-header">
+        <div class="logo-mark">CP</div>
+        <h1>Unlock Your Financial Clarity</h1>
+        <p>Get full access to ClearPath Budget for just $5/month</p>
+      </div>
+
+      @if (error()) {
+        <div class="alert alert-error">{{ error() }}</div>
+      }
+
+      <div class="plan-card">
+        <div class="plan-header">
+          <div>
+            <h2 class="plan-name">ClearPath Premium</h2>
+            <p class="plan-tagline">Everything you need to master your finances</p>
+          </div>
+          <div class="plan-price-badge">
+            <span class="price">$5</span>
+            <span class="period">/mo</span>
+          </div>
+        </div>
+
+        <div class="features-list">
+          @for (feature of features; track feature.text) {
+            <div class="feature-item" [class.coming-soon]="feature.icon === '🔜'">
+              <span class="feature-icon">{{ feature.icon }}</span>
+              <span class="feature-text">{{ feature.text }}</span>
+            </div>
+          }
+        </div>
+
+        <button
+          class="btn btn-primary btn-full btn-lg subscribe-btn"
+          (click)="subscribe()"
+          [disabled]="checkoutLoading()"
+        >
+          @if (checkoutLoading()) {
+            <span class="btn-spinner"></span>
+            Redirecting to Checkout...
+          } @else {
+            Subscribe Now — $5/month
+          }
+        </button>
+
+        <div class="stripe-note">
+          <span>🔒</span>
+          <span>Secure payment powered by Stripe. Cancel anytime.</span>
+        </div>
+      </div>
+    }
+
+    @if (showCancelConfirm()) {
+      <app-confirm-dialog
+        title="Cancel Subscription"
+        message="Are you sure you want to cancel? You'll lose access to premium features at the end of your billing period."
+        confirmText="Yes, Cancel"
+        confirmButtonClass="btn-danger"
+        (confirmed)="cancelSubscription()"
+        (cancelled)="showCancelConfirm.set(false)"
+      />
+    }
+  </div>
+</div>
