@@ -11,7 +11,7 @@ const ACCOUNT_TYPES: { value: AccountType; label: string }[] = [
   { value: 'SAVINGS', label: 'Savings' },
   { value: 'CREDIT_CARD', label: 'Credit Card' },
   { value: 'INVESTMENT', label: 'Investment' },
-  { value: 'CASH', label: 'Cash' },
+  { value: 'LOAN', label: 'Loan' },
   { value: 'OTHER', label: 'Other' },
 ];
 
@@ -37,29 +37,29 @@ export class AccountsComponent implements OnInit {
 
   readonly netWorth = computed(() => {
     return this.accounts().reduce((sum, acc) => {
-      if (acc.accountType === 'CREDIT_CARD') return sum - acc.balance;
+      if (acc.type === 'CREDIT_CARD' || acc.type === 'LOAN') return sum - acc.balance;
       return sum + acc.balance;
     }, 0);
   });
 
   readonly totalAssets = computed(() => {
     return this.accounts()
-      .filter(a => a.accountType !== 'CREDIT_CARD')
+      .filter(a => a.type !== 'CREDIT_CARD' && a.type !== 'LOAN')
       .reduce((s, a) => s + a.balance, 0);
   });
 
   readonly totalLiabilities = computed(() => {
     return this.accounts()
-      .filter(a => a.accountType === 'CREDIT_CARD')
+      .filter(a => a.type === 'CREDIT_CARD' || a.type === 'LOAN')
       .reduce((s, a) => s + a.balance, 0);
   });
 
   accountForm = this.fb.group({
     name: ['', Validators.required],
     bankName: ['', Validators.required],
-    accountType: ['CHECKING' as AccountType, Validators.required],
+    type: ['CHECKING' as AccountType, Validators.required],
     balance: [0, Validators.required],
-    lastFourDigits: ['', [Validators.pattern(/^\d{4}$/)]]
+    accountNumberLast4: ['', [Validators.pattern(/^\d{4}$/)]]
   });
 
   ngOnInit(): void {
@@ -79,7 +79,7 @@ export class AccountsComponent implements OnInit {
 
   openAddForm(): void {
     this.editingAccount.set(null);
-    this.accountForm.reset({ name: '', bankName: '', accountType: 'CHECKING', balance: 0, lastFourDigits: '' });
+    this.accountForm.reset({ name: '', bankName: '', type: 'CHECKING', balance: 0, accountNumberLast4: '' });
     this.formError.set(null);
     this.showForm.set(true);
   }
@@ -89,9 +89,9 @@ export class AccountsComponent implements OnInit {
     this.accountForm.patchValue({
       name: account.name,
       bankName: account.bankName,
-      accountType: account.accountType,
+      type: account.type,
       balance: account.balance,
-      lastFourDigits: account.lastFourDigits ?? ''
+      accountNumberLast4: account.accountNumberLast4 ?? ''
     });
     this.formError.set(null);
     this.showForm.set(true);
@@ -113,9 +113,9 @@ export class AccountsComponent implements OnInit {
     const req: AccountRequest = {
       name: val.name!,
       bankName: val.bankName!,
-      accountType: val.accountType! as AccountType,
+      type: val.type! as AccountType,
       balance: val.balance!,
-      lastFourDigits: val.lastFourDigits || undefined
+      accountNumberLast4: val.accountNumberLast4 || undefined
     };
     const obs = this.editingAccount()
       ? this.accountService.updateAccount(this.editingAccount()!.id, req)
@@ -160,13 +160,14 @@ export class AccountsComponent implements OnInit {
       case 'SAVINGS': return 'badge-green';
       case 'CREDIT_CARD': return 'badge-red';
       case 'INVESTMENT': return 'badge-purple';
+      case 'LOAN': return 'badge-orange';
       default: return 'badge-gray';
     }
   }
 
   getBalanceClass(account: Account): string {
-    if (account.accountType === 'CREDIT_CARD') return 'text-red';
-    if (account.accountType === 'INVESTMENT') return 'text-accent';
+    if (account.type === 'CREDIT_CARD' || account.type === 'LOAN') return 'text-red';
+    if (account.type === 'INVESTMENT') return 'text-accent';
     return 'text-green';
   }
 

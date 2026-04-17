@@ -1,6 +1,7 @@
 package com.budgetapp.dto.request;
 
 import com.budgetapp.model.BillFrequency;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -24,7 +25,9 @@ public class BillRequest {
 
     private Long categoryId;
 
+    @JsonProperty("isAutoPay")
     private boolean isAutoPay;
 
+    @JsonProperty("isActive")
     private boolean isActive = true;
 }

@@ -2,6 +2,7 @@ package com.budgetapp.service;
 
 import com.budgetapp.dto.request.BudgetRequest;
 import com.budgetapp.dto.response.BudgetResponse;
+import com.budgetapp.dto.response.BudgetSummaryResponse;
 import com.budgetapp.exception.ResourceNotFoundException;
 import com.budgetapp.exception.UnauthorizedException;
 import com.budgetapp.model.*;
@@ -79,6 +80,38 @@ public class BudgetService {
         return mapToResponse(updated, user);
     }
 
+    public BudgetSummaryResponse getBudgetSummary(Long userId, int month, int year) {
+        User user = getUserById(userId);
+        List<Budget> budgets = budgetRepository.findByUserAndMonthAndYear(user, month, year);
+
+        BigDecimal totalAllocated = budgets.stream()
+                .map(Budget::getAllocatedAmount)
+                .filter(a -> a != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalSpent = budgets.stream()
+                .map(b -> computeSpentAmount(b, user))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Total income for the month from transactions
+        LocalDate startDate = LocalDate.of(year, month, 1);
+        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+        BigDecimal totalIncome = transactionRepository
+                .sumAmountByUserAndTypeAndDateBetween(user.getId(), "INCOME", startDate, endDate);
+        if (totalIncome == null) {
+            totalIncome = BigDecimal.ZERO;
+        }
+
+        BigDecimal unallocated = totalIncome.subtract(totalAllocated);
+
+        return BudgetSummaryResponse.builder()
+                .totalAllocated(totalAllocated)
+                .totalSpent(totalSpent)
+                .totalIncome(totalIncome)
+                .unallocated(unallocated)
+                .build();
+    }
+
     @Transactional
     public void deleteBudget(Long id, Long userId) {
         Budget budget = budgetRepository.findById(id)
@@ -123,11 +156,13 @@ public class BudgetService {
                 .id(budget.getId())
                 .categoryId(budget.getCategory() != null ? budget.getCategory().getId() : null)
                 .categoryName(budget.getCategory() != null ? budget.getCategory().getName() : null)
+                .categoryColor(budget.getCategory() != null ? budget.getCategory().getColorHex() : null)
                 .allocatedAmount(budget.getAllocatedAmount())
                 .spentAmount(spentAmount)
                 .month(budget.getMonth())
                 .year(budget.getYear())
                 .percentage(percentage)
+                .createdAt(budget.getCreatedAt())
                 .build();
     }
 

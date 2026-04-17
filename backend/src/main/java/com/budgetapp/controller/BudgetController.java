@@ -2,6 +2,7 @@ package com.budgetapp.controller;
 
 import com.budgetapp.dto.request.BudgetRequest;
 import com.budgetapp.dto.response.BudgetResponse;
+import com.budgetapp.dto.response.BudgetSummaryResponse;
 import com.budgetapp.exception.ResourceNotFoundException;
 import com.budgetapp.repository.UserRepository;
 import com.budgetapp.service.BudgetService;
@@ -33,6 +34,17 @@ public class BudgetController {
         int targetMonth = (month != null && month > 0) ? month : LocalDate.now().getMonthValue();
         int targetYear = (year != null && year > 0) ? year : LocalDate.now().getYear();
         return ResponseEntity.ok(budgetService.getBudgetsForMonth(userId, targetMonth, targetYear));
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<BudgetSummaryResponse> getBudgetSummary(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year) {
+        Long userId = getUserIdFromEmail(userDetails.getUsername());
+        int targetMonth = (month != null && month > 0) ? month : LocalDate.now().getMonthValue();
+        int targetYear = (year != null && year > 0) ? year : LocalDate.now().getYear();
+        return ResponseEntity.ok(budgetService.getBudgetSummary(userId, targetMonth, targetYear));
     }
 
     @PostMapping

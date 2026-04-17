@@ -45,7 +45,7 @@ export class BillsComponent implements OnInit {
   });
 
   readonly monthlyTotal = computed(() => {
-    return this.bills().filter(b => b.status !== 'PAID').reduce((sum, b) => {
+    return this.bills().filter(b => !this.isBillPaidThisCycle(b)).reduce((sum, b) => {
       if (b.frequency === 'MONTHLY') return sum + b.amount;
       if (b.frequency === 'WEEKLY') return sum + b.amount * 4.33;
       if (b.frequency === 'QUARTERLY') return sum + b.amount / 3;
@@ -57,10 +57,9 @@ export class BillsComponent implements OnInit {
   billForm = this.fb.group({
     name: ['', Validators.required],
     amount: [0, [Validators.required, Validators.min(0.01)]],
-    dueDayOfMonth: [1, [Validators.required, Validators.min(1), Validators.max(31)]],
+    dueDay: [1, [Validators.required, Validators.min(1), Validators.max(31)]],
     frequency: ['MONTHLY' as BillFrequency, Validators.required],
-    autopay: [false],
-    notes: ['']
+    isAutoPay: [false]
   });
 
   ngOnInit(): void {
@@ -80,7 +79,7 @@ export class BillsComponent implements OnInit {
 
   openAddForm(): void {
     this.editingBill.set(null);
-    this.billForm.reset({ name: '', amount: 0, dueDayOfMonth: 1, frequency: 'MONTHLY', autopay: false, notes: '' });
+    this.billForm.reset({ name: '', amount: 0, dueDay: 1, frequency: 'MONTHLY', isAutoPay: false });
     this.formError.set(null);
     this.showForm.set(true);
   }
@@ -90,10 +89,9 @@ export class BillsComponent implements OnInit {
     this.billForm.patchValue({
       name: bill.name,
       amount: bill.amount,
-      dueDayOfMonth: bill.dueDayOfMonth,
+      dueDay: bill.dueDay,
       frequency: bill.frequency,
-      autopay: bill.autopay,
-      notes: bill.notes ?? ''
+      isAutoPay: bill.isAutoPay
     });
     this.formError.set(null);
     this.showForm.set(true);
@@ -115,10 +113,9 @@ export class BillsComponent implements OnInit {
     const req: BillRequest = {
       name: val.name!,
       amount: val.amount!,
-      dueDayOfMonth: val.dueDayOfMonth!,
+      dueDay: val.dueDay!,
       frequency: val.frequency! as BillFrequency,
-      autopay: val.autopay ?? false,
-      notes: val.notes || undefined
+      isAutoPay: val.isAutoPay ?? false
     };
     const obs = this.editingBill()
       ? this.billService.updateBill(this.editingBill()!.id, req)
@@ -160,8 +157,23 @@ export class BillsComponent implements OnInit {
     });
   }
 
+  isBillPaidThisCycle(bill: Bill): boolean {
+    if (!bill.lastPaidDate) return false;
+    const lastPaid = new Date(bill.lastPaidDate);
+    const nextDue = new Date(bill.nextDueDate);
+    const today = new Date();
+    // Bill is paid for this cycle if the last payment date is on or after the
+    // most recent due date (i.e., nextDueDate - one billing period), approximated
+    // by checking that lastPaidDate is not before today minus 31 days and
+    // lastPaidDate >= nextDueDate minus the billing period.
+    // Simpler: paid if lastPaidDate is this month/cycle (after today minus 31 days).
+    const oneMonthAgo = new Date(today);
+    oneMonthAgo.setDate(oneMonthAgo.getDate() - 31);
+    return lastPaid >= oneMonthAgo && lastPaid <= today;
+  }
+
   getBillStatusInfo(bill: Bill): { label: string; cssClass: string } {
-    if (bill.status === 'PAID') return { label: 'Paid', cssClass: 'badge-green' };
+    if (this.isBillPaidThisCycle(bill)) return { label: 'Paid', cssClass: 'badge-green' };
     const today = new Date();
     const due = new Date(bill.nextDueDate);
     const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));

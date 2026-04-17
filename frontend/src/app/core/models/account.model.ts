@@ -1,12 +1,12 @@
-export type AccountType = 'CHECKING' | 'SAVINGS' | 'CREDIT_CARD' | 'INVESTMENT' | 'CASH' | 'OTHER';
+export type AccountType = 'CHECKING' | 'SAVINGS' | 'CREDIT_CARD' | 'INVESTMENT' | 'LOAN' | 'OTHER';
 
 export interface Account {
   id: number;
   name: string;
   bankName: string;
-  accountType: AccountType;
+  type: AccountType;
   balance: number;
-  lastFourDigits?: string;
+  accountNumberLast4?: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -14,7 +14,7 @@ export interface Account {
 export interface AccountRequest {
   name: string;
   bankName: string;
-  accountType: AccountType;
+  type: AccountType;
   balance: number;
-  lastFourDigits?: string;
+  accountNumberLast4?: string;
 }

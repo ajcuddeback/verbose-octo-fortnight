@@ -5,9 +5,11 @@ import { User } from '../models/user.model';
 export class AuthStore {
   private _user = signal<User | null>(null);
   private _loading = signal(false);
+  private _initialized = signal(false);
 
   readonly user = this._user.asReadonly();
   readonly loading = this._loading.asReadonly();
+  readonly initialized = this._initialized.asReadonly();
 
   // Authentication is determined by presence of user data loaded from server
   readonly isAuthenticated = computed(() => this._user() !== null);
@@ -20,4 +22,5 @@ export class AuthStore {
   setUser(user: User): void { this._user.set(user); }
   clearAuth(): void { this._user.set(null); }
   setLoading(v: boolean): void { this._loading.set(v); }
+  setInitialized(v: boolean): void { this._initialized.set(v); }
 }

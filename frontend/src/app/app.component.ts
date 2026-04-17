@@ -42,10 +42,20 @@ export class AppComponent implements OnInit {
     // Always attempt to restore session from the HttpOnly cookie on startup.
     // isAuthenticated() starts false (no user in memory yet), so we must
     // unconditionally call /me — the browser sends the cookie automatically.
+    // setInitialized(true) is called after the check completes so that auth
+    // guards can wait for initialization before deciding to redirect.
     this.authStore.setLoading(true);
     this.authService.getMe().subscribe({
-      next: (user) => { this.authStore.setUser(user); this.authStore.setLoading(false); },
-      error: () => { this.authStore.clearAuth(); this.authStore.setLoading(false); }
+      next: (user) => {
+        this.authStore.setUser(user);
+        this.authStore.setLoading(false);
+        this.authStore.setInitialized(true);
+      },
+      error: () => {
+        this.authStore.clearAuth();
+        this.authStore.setLoading(false);
+        this.authStore.setInitialized(true);
+      }
     });
   }
 }
