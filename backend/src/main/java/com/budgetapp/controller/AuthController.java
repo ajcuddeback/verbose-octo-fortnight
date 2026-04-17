@@ -31,14 +31,12 @@ public class AuthController {
      */
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        Object[] result = authService.register(request);
-        String token        = (String)       result[0];
-        AuthResponse body   = (AuthResponse) result[1];
+        AuthService.AuthResult result = authService.register(request);
 
-        ResponseCookie jwtCookie = jwtTokenProvider.generateJwtCookie(token);
+        ResponseCookie jwtCookie = jwtTokenProvider.generateJwtCookie(result.token());
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .body(body);
+                .body(result.authResponse());
     }
 
     /**
@@ -47,14 +45,12 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        Object[] result = authService.login(request);
-        String token        = (String)       result[0];
-        AuthResponse body   = (AuthResponse) result[1];
+        AuthService.AuthResult result = authService.login(request);
 
-        ResponseCookie jwtCookie = jwtTokenProvider.generateJwtCookie(token);
+        ResponseCookie jwtCookie = jwtTokenProvider.generateJwtCookie(result.token());
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .body(body);
+                .body(result.authResponse());
     }
 
     /**

@@ -3,6 +3,7 @@ package com.budgetapp.scheduler;
 import com.budgetapp.model.SubscriptionStatus;
 import com.budgetapp.model.User;
 import com.budgetapp.repository.*;
+import com.budgetapp.repository.FinancialHealthScoreRepository;
 import com.budgetapp.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ public class DataRetentionScheduler {
     private final AccountRepository accountRepository;
     private final BillRepository billRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final FinancialHealthScoreRepository financialHealthScoreRepository;
     private final EmailService emailService;
 
     /**
@@ -126,6 +128,12 @@ public class DataRetentionScheduler {
                     subscriptionRepository.findByUserOrderByCreatedAtDesc(user);
             subscriptionRepository.deleteAll(subscriptions);
             log.info("Deleted {} subscriptions for user {}", subscriptions.size(), email);
+
+            // Delete financial health scores
+            List<com.budgetapp.model.FinancialHealthScore> healthScores =
+                    financialHealthScoreRepository.findByUser(user);
+            financialHealthScoreRepository.deleteAll(healthScores);
+            log.info("Deleted {} financial health scores for user {}", healthScores.size(), email);
 
             // Delete user
             userRepository.delete(user);

@@ -16,4 +16,6 @@ public interface FinancialHealthScoreRepository extends JpaRepository<FinancialH
 
     List<FinancialHealthScore> findByUserAndCalculatedAtBetween(
             User user, LocalDateTime startDate, LocalDateTime endDate);
+
+    List<FinancialHealthScore> findByUser(User user);
 }

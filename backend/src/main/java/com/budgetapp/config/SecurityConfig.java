@@ -47,6 +47,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf
                 .csrfTokenRepository(csrfTokenRepository)
                 .csrfTokenRequestHandler(requestHandler)
+                .ignoringRequestMatchers("/api/auth/login", "/api/auth/register") // no cookie yet at login/register
                 .ignoringRequestMatchers("/api/subscriptions/webhook") // Stripe signs its own payloads
             )
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))

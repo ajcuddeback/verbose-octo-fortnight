@@ -28,6 +28,13 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class AuthService {
 
+    /**
+     * Typed container returned by register() and login().
+     * The controller extracts the token for the HttpOnly cookie and
+     * sends the AuthResponse as the response body.
+     */
+    public record AuthResult(String token, AuthResponse authResponse) {}
+
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final PasswordEncoder passwordEncoder;
@@ -38,11 +45,9 @@ public class AuthService {
     /**
      * Registers a new user and returns the generated JWT token alongside the AuthResponse.
      * The controller is responsible for placing the token in an HttpOnly cookie.
-     *
-     * @return a two-element array where [0] is the raw JWT String and [1] is the AuthResponse
      */
     @Transactional
-    public Object[] register(RegisterRequest request) {
+    public AuthResult register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Email is already registered: " + request.getEmail());
         }
@@ -87,16 +92,14 @@ public class AuthService {
                 .user(mapToUserResponse(savedUser))
                 .build();
 
-        return new Object[]{token, authResponse};
+        return new AuthResult(token, authResponse);
     }
 
     /**
      * Authenticates a user and returns the generated JWT token alongside the AuthResponse.
      * The controller is responsible for placing the token in an HttpOnly cookie.
-     *
-     * @return a two-element array where [0] is the raw JWT String and [1] is the AuthResponse
      */
-    public Object[] login(LoginRequest request) {
+    public AuthResult login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
@@ -113,7 +116,7 @@ public class AuthService {
                 .user(mapToUserResponse(user))
                 .build();
 
-        return new Object[]{token, authResponse};
+        return new AuthResult(token, authResponse);
     }
 
     public UserResponse getCurrentUser(String email) {
