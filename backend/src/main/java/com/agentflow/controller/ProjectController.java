@@ -1,10 +1,14 @@
 package com.agentflow.controller;
 
 import com.agentflow.dto.*;
+import com.agentflow.model.User;
+import com.agentflow.repository.UserRepository;
 import com.agentflow.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,35 +19,47 @@ import java.util.List;
 public class ProjectController {
 
     private final ProjectService projectService;
+    private final UserRepository userRepository;
 
-    /** Submit a new product idea. Returns the created project (status: PENDING). */
+    /** Submit a new product idea. Returns the project with credit cost estimate (status: PENDING). */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ProjectResponse createProject(@Valid @RequestBody CreateProjectRequest request) {
-        return projectService.createProject(request);
+    public ProjectResponse createProject(@Valid @RequestBody CreateProjectRequest request,
+                                         @AuthenticationPrincipal UserDetails principal) {
+        return projectService.createProject(request, resolveUser(principal));
     }
 
-    /** Kick off the agent workflow for a pending project. Runs async — poll GET for updates. */
+    /**
+     * Confirm and kick off the agent workflow. Credits are deducted here — not at project creation.
+     * Runs async — poll GET /{id} to watch status progress.
+     */
     @PostMapping("/{id}/start")
-    public ProjectResponse startWorkflow(@PathVariable Long id) {
-        return projectService.startWorkflow(id);
+    public ProjectResponse startWorkflow(@PathVariable Long id,
+                                         @AuthenticationPrincipal UserDetails principal) {
+        return projectService.startWorkflow(id, resolveUser(principal));
     }
 
-    /** List all projects (summary only). */
     @GetMapping
-    public List<ProjectResponse> listProjects() {
-        return projectService.listProjects();
+    public List<ProjectResponse> listProjects(@AuthenticationPrincipal UserDetails principal) {
+        return projectService.listProjects(resolveUser(principal));
     }
 
-    /** Get project status (lightweight — no messages or tasks). */
+    /** Lightweight status poll — no messages or tasks. */
     @GetMapping("/{id}")
-    public ProjectResponse getProject(@PathVariable Long id) {
-        return projectService.getProject(id);
+    public ProjectResponse getProject(@PathVariable Long id,
+                                      @AuthenticationPrincipal UserDetails principal) {
+        return projectService.getProject(id, resolveUser(principal));
     }
 
-    /** Get full project detail including all agent messages and tasks. */
+    /** Full project detail including all agent messages and task board. */
     @GetMapping("/{id}/detail")
-    public ProjectDetailResponse getProjectDetail(@PathVariable Long id) {
-        return projectService.getProjectDetail(id);
+    public ProjectDetailResponse getProjectDetail(@PathVariable Long id,
+                                                  @AuthenticationPrincipal UserDetails principal) {
+        return projectService.getProjectDetail(id, resolveUser(principal));
+    }
+
+    private User resolveUser(UserDetails principal) {
+        return userRepository.findByEmail(principal.getUsername())
+            .orElseThrow(() -> new IllegalStateException("User not found: " + principal.getUsername()));
     }
 }
